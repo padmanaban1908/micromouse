@@ -1,0 +1,141 @@
+MICROMOUSE FINAL CONNECTIONS
+ESP32 LEFT SIDE: encoders + motor driver
+Pin 1   3V3     → 3.3V rail (encoder pull-ups, TB6612 VCC)
+Pin 2   EN      → empty
+Pin 3   GPIO36  → Left encoder C1    + 4.7k to 3.3V
+Pin 4   GPIO39  → Left encoder C2    + 4.7k to 3.3V
+Pin 5   GPIO34  → Right encoder C1   + 4.7k to 3.3V
+Pin 6   GPIO35  → Right encoder C2   + 4.7k to 3.3V
+Pin 7   GPIO32  → TB6612 PWMB
+Pin 8   GPIO33  → TB6612 BIN2
+Pin 9   GPIO25  → TB6612 BIN1
+Pin 10  GPIO26  → TB6612 AIN2
+Pin 11  GPIO27  → TB6612 PWMA
+Pin 12  GPIO14  → TB6612 AIN1
+Pin 13  GPIO12  → empty
+Pin 14  GND     → GND (TB6612, encoders)
+Pin 15  GPIO13  → Button 2 → GND
+Pin 16  GPIO9   → never use
+Pin 17  GPIO10  → never use
+Pin 18  GPIO11  → never use
+Pin 19  5V      → buck converter 5V output
+ESP32 RIGHT SIDE: 5 ToF + MPU6050
+Pin 38  GND     → GND (ToF sensors, MPU6050)
+Pin 37  GPIO23  → Left ToF XSHUT
+Pin 36  GPIO22  → SCL (all 5 ToF + MPU)
+Pin 35  GPIO1   → empty (USB TX)
+Pin 34  GPIO3   → empty (USB RX)
+Pin 33  GPIO21  → SDA (all 5 ToF + MPU)
+Pin 32  GND     → spare GND
+Pin 31  GPIO19  → Left-front ToF XSHUT
+Pin 30  GPIO18  → Front ToF XSHUT
+Pin 29  GPIO5   → empty
+Pin 28  GPIO17  → Right-front ToF XSHUT
+Pin 27  GPIO16  → Right ToF XSHUT
+Pin 26  GPIO4   → Button 1 → GND
+Pin 25  GPIO0   → empty (BOOT button)
+Pin 24  GPIO2   → empty (on-board LED)
+Pin 23  GPIO15  → empty
+Pin 22  GPIO8   → never use
+Pin 21  GPIO7   → never use
+Pin 20  GPIO6   → never use
+TB6612 MOTOR DRIVER
+VM    → Battery + 12.6V
+VCC   → 3.3V
+STBY  → 3.3V (5V also OK)
+GND   → GND
+
+PWMA  → GPIO27
+AIN1  → GPIO14
+AIN2  → GPIO26
+AO1   → Left motor M1
+AO2   → Left motor M2
+
+PWMB  → GPIO32
+BIN1  → GPIO25
+BIN2  → GPIO33
+BO1   → Right motor M1
+BO2   → Right motor M2
+ENCODERS
+Left encoder:   VCC → 5V   GND → GND   C1 → GPIO36   C2 → GPIO39
+Right encoder:  VCC → 5V   GND → GND   C1 → GPIO34   C2 → GPIO35
+ENCODER PULL-UPS (required)
+
+All four resistors join at 3.3V. Each free end goes to its own pin only:
+
+                 ┌─ 4.7k ─→ GPIO36
+3.3V (Pin 1) ────┼─ 4.7k ─→ GPIO39
+                 ├─ 4.7k ─→ GPIO34
+                 └─ 4.7k ─→ GPIO35
+5 ToF SENSORS
+
+All five share these four connections:
+
+VIN → 5V
+GND → GND
+SDA → GPIO21
+SCL → GPIO22
+
+Each one gets its own XSHUT pin and I2C address:
+
+Left         XSHUT → GPIO23   address 0x30
+Left-front   XSHUT → GPIO19   address 0x31
+Front        XSHUT → GPIO18   address 0x32
+Right-front  XSHUT → GPIO17   address 0x33
+Right        XSHUT → GPIO16   address 0x34
+MPU6050
+VCC → 5V
+GND → GND
+SDA → GPIO21
+SCL → GPIO22
+AD0 → GND (address 0x68)
+INT, XDA, XCL → not connected
+BUTTONS
+Button 1 : GPIO4  → button → GND   (INPUT_PULLUP)
+Button 2 : GPIO13 → button → GND   (INPUT_PULLUP)
+POWER
+Battery +    → TB6612 VM
+Battery +    → buck converter IN+
+Buck OUT 5V  → ESP32 pin 19 (5V), ToF VIN, MPU VCC, encoder VCC
+Battery −    → common GND
+
+Connect all of these grounds together: battery, buck, ESP32, TB6612, encoders, ToF sensors and MPU6050.
+
+RESISTORS
+Encoders: four 4.7k resistors, required.
+I2C: no resistors, because the sensor modules have their own pull-ups. Add 4.7k to 3.3V on SDA and SCL only if the bus doesn't work.
+Buttons: no resistors, because INPUT_PULLUP handles them.
+WIRE GAUGE
+Battery, VM, buck input, main GND  → 22 AWG
+Motor wires                        → 26 AWG
+All signals and sensor power       → 28–30 AWG
+CODE DEFINES
+cpp
+#define PWMA 27
+#define AIN1 14
+#define AIN2 26
+#define PWMB 32
+#define BIN1 25
+#define BIN2 33
+
+#define L_ENC_A 36
+#define L_ENC_B 39
+#define R_ENC_A 34
+#define R_ENC_B 35
+
+#define I2C_SDA 21
+#define I2C_SCL 22
+
+#define XSHUT_L  23
+#define XSHUT_LF 19
+#define XSHUT_F  18
+#define XSHUT_RF 17
+#define XSHUT_R  16
+
+#define BTN1 4
+#define BTN2 13
+CHECK BEFORE PLUGGING IN THE ESP32
+Buck output: it should read 5.0V.
+SDA/SCL: both must read 3.3V or less, never 5V.
+Encoder C1/C2: turn the wheel by hand. Each signal must switch between 0V and about 3.3V, never 5V.
+In code: turn on the PCNT glitch filter for all four encoder pins.
