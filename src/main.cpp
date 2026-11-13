@@ -4,7 +4,7 @@
  * ============================================================================
  * Hardware Pin Specifications:
  *   - Left Motor   : PWMA=27, AIN1=14, AIN2=26
- *   - Right Motor  : PWMB=32, BIN1=25, BIN2=33
+ *   - Right Motor  : PWMB=32, BIN1=25, BIN2=33 (Inverted for forward symmetry)
  *   - Encoders     : Left=(36, 39), Right=(34, 35) + 4.7k external pull-ups
  *   - I2C Bus      : SDA=21, SCL=22 (400 kHz Fast I2C)
  *   - 5x ToF XSHUT : 23, 19, 18, 17, 16 (VL53L0X sensors)
@@ -47,21 +47,21 @@ CellCoord floodQueue[256];
 int qHead = 0;
 int qTail = 0;
 
-// Encoder ISRs
+// Encoder Interrupt Handlers with Inversion Flag Support
 void IRAM_ATTR isrEncoderLeft() {
-    if (digitalRead(PIN_ENC_L_B)) {
-        encLeftTicks++;
-    } else {
-        encLeftTicks--;
-    }
+#if INVERT_LEFT_ENCODER
+    if (digitalRead(PIN_ENC_L_B)) encLeftTicks--; else encLeftTicks++;
+#else
+    if (digitalRead(PIN_ENC_L_B)) encLeftTicks++; else encLeftTicks--;
+#endif
 }
 
 void IRAM_ATTR isrEncoderRight() {
-    if (digitalRead(PIN_ENC_R_B)) {
-        encRightTicks--;
-    } else {
-        encRightTicks++;
-    }
+#if INVERT_RIGHT_ENCODER
+    if (digitalRead(PIN_ENC_R_B)) encRightTicks++; else encRightTicks--;
+#else
+    if (digitalRead(PIN_ENC_R_B)) encRightTicks--; else encRightTicks++;
+#endif
 }
 
 // Operating State Machine
@@ -83,7 +83,7 @@ void setup() {
     delay(500);
 
     Serial.println("\n========================================================");
-    Serial.println("🐭 ESP32 MICROMOUSE INITIALIZING (PlatformIO Build)...");
+    Serial.println("🐭 ESP32 MICROMOUSE INITIALIZING (50% Speed Profile)...");
     Serial.println("========================================================");
 
     // 1. Initialize Buttons
@@ -108,7 +108,7 @@ void setup() {
     floodfill(true); // Pre-calculate distances to center goal
 
     Serial.println("========================================================");
-    Serial.println("READY FOR ACTION:");
+    Serial.println("READY FOR ACTION (50% SPEED):");
     Serial.println("  👉 Press BTN1 (Pin 4)  : Start Search Run (Exploration)");
     Serial.println("  👉 Press BTN2 (Pin 13) : Start Speed Run (SMOOTH 90° TURNS)");
     Serial.println("========================================================");
@@ -122,11 +122,11 @@ void loop() {
         case STATE_WAIT_USER: {
             if (digitalRead(PIN_BTN1) == LOW) {
                 delay(300); // Debounce
-                Serial.println("🚀 [RUN 1] Starting Autonomous Search Run...");
+                Serial.println("🚀 [RUN 1] Starting Autonomous Search Run (50% Speed)...");
                 mouseState = STATE_SEARCH_RUN;
             } else if (digitalRead(PIN_BTN2) == LOW) {
                 delay(300); // Debounce
-                Serial.println("⚡ [RUN 2] Starting High-Speed Run with Smooth 90° Turns!");
+                Serial.println("⚡ [RUN 2] Starting High-Speed Run with Smooth 90° Turns (50% Speed)!");
                 mouseState = STATE_SPEED_RUN;
             }
             delay(10);
@@ -182,7 +182,7 @@ void loop() {
             }
 
             Direction nextDir = getBestNextDirection();
-            // Engage Smooth Continuous 90° Turns at high speed!
+            // Engage Smooth Continuous 90° Turns at controlled speed!
             navigateToNextCell(nextDir, true, SPEED_FAST_CRUISE);
             break;
         }
