@@ -23,43 +23,45 @@ inline void setMotorRaw(int leftPwm, int rightPwm) {
     leftPwm  = constrain(leftPwm, -255, 255);
     rightPwm = constrain(rightPwm, -255, 255);
 
-    // Left Motor
-    if (leftPwm >= 0) {
+    // Left Motor Direction
+    bool leftFwd = (leftPwm >= 0);
+#if INVERT_LEFT_MOTOR
+    leftFwd = !leftFwd;
+#endif
+
+    if (leftFwd) {
         digitalWrite(PIN_AIN1, HIGH);
         digitalWrite(PIN_AIN2, LOW);
-#if defined(ESP_ARDUINO_VERSION_MAJOR) && (ESP_ARDUINO_VERSION_MAJOR >= 3)
-        ledcWrite(PIN_PWMA, leftPwm);
-#else
-        ledcWrite(CH_MOT_L, leftPwm);
-#endif
     } else {
         digitalWrite(PIN_AIN1, LOW);
         digitalWrite(PIN_AIN2, HIGH);
-#if defined(ESP_ARDUINO_VERSION_MAJOR) && (ESP_ARDUINO_VERSION_MAJOR >= 3)
-        ledcWrite(PIN_PWMA, -leftPwm);
-#else
-        ledcWrite(CH_MOT_L, -leftPwm);
-#endif
     }
 
-    // Right Motor
-    if (rightPwm >= 0) {
+#if defined(ESP_ARDUINO_VERSION_MAJOR) && (ESP_ARDUINO_VERSION_MAJOR >= 3)
+    ledcWrite(PIN_PWMA, abs(leftPwm));
+#else
+    ledcWrite(CH_MOT_L, abs(leftPwm));
+#endif
+
+    // Right Motor Direction (Inverted so both wheels turn forward together)
+    bool rightFwd = (rightPwm >= 0);
+#if INVERT_RIGHT_MOTOR
+    rightFwd = !rightFwd;
+#endif
+
+    if (rightFwd) {
         digitalWrite(PIN_BIN1, HIGH);
         digitalWrite(PIN_BIN2, LOW);
-#if defined(ESP_ARDUINO_VERSION_MAJOR) && (ESP_ARDUINO_VERSION_MAJOR >= 3)
-        ledcWrite(PIN_PWMB, rightPwm);
-#else
-        ledcWrite(CH_MOT_R, rightPwm);
-#endif
     } else {
         digitalWrite(PIN_BIN1, LOW);
         digitalWrite(PIN_BIN2, HIGH);
-#if defined(ESP_ARDUINO_VERSION_MAJOR) && (ESP_ARDUINO_VERSION_MAJOR >= 3)
-        ledcWrite(PIN_PWMB, -rightPwm);
-#else
-        ledcWrite(CH_MOT_R, -rightPwm);
-#endif
     }
+
+#if defined(ESP_ARDUINO_VERSION_MAJOR) && (ESP_ARDUINO_VERSION_MAJOR >= 3)
+    ledcWrite(PIN_PWMB, abs(rightPwm));
+#else
+    ledcWrite(CH_MOT_R, abs(rightPwm));
+#endif
 }
 
 inline void stopMotors() {
