@@ -15,12 +15,12 @@
 #define PIN_BIN1 25
 #define PIN_BIN2 33
 
-// Direction Inversion (Because motors face opposite sides of the chassis)
-#define INVERT_LEFT_MOTOR  0
-#define INVERT_RIGHT_MOTOR 1
+// Direction Inversion: Inverted so both wheels drive FORWARD
+#define INVERT_LEFT_MOTOR  1
+#define INVERT_RIGHT_MOTOR 0
 
-#define INVERT_LEFT_ENCODER  0
-#define INVERT_RIGHT_ENCODER 1
+#define INVERT_LEFT_ENCODER  1
+#define INVERT_RIGHT_ENCODER 0
 
 // Quadrature Encoders (GPI Pins with external 4.7k pull-up resistors to 3.3V)
 #define PIN_ENC_L_A 36 // VP
@@ -65,10 +65,10 @@ const uint8_t TOF_I2C_ADDRS[NUM_TOF] = {0x30, 0x31, 0x32, 0x33, 0x34};
 #define WALL_FRONT_THRESHOLD_MM 150
 #define NOMINAL_SIDE_DIST_MM    84
 
-// Speeds (REDUCED TO 50% FOR SAFE BENCH & CONTROLLED TESTING)
-#define SPEED_SEARCH_CRUISE 75    // 50% of 150
-#define SPEED_FAST_CRUISE   110   // 50% of 220
-#define SPEED_SMOOTH_TURN   80    // 50% of 160
+// Speeds (50% controlled testing speed)
+#define SPEED_SEARCH_CRUISE 75
+#define SPEED_FAST_CRUISE   110
+#define SPEED_SMOOTH_TURN   80
 
 // PID Gains tuned for 50% speed
 #define KP_WALL 0.35f
