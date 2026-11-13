@@ -90,14 +90,15 @@ inline void advanceStraightOneCell(int cruiseSpeed) {
 
 /**
  * ============================================================================
- * 🔄 CONTINUOUS SMOOTH 90° ARC TURN (Zero Stop Velocity)
+ * 🔄 CONTINUOUS SMOOTH 90° ARC TURN (50% Controlled Speed)
  * ============================================================================
  */
 inline void executeSmoothTurn90(bool turnRight) {
     float startHeading = currentYawDeg;
 
-    int outerPwm = SPEED_SMOOTH_TURN + 55;
-    int innerPwm = SPEED_SMOOTH_TURN - 65;
+    // Proportional differential wheel speeds at 50% speed
+    int outerPwm = SPEED_SMOOTH_TURN + 30;
+    int innerPwm = SPEED_SMOOTH_TURN - 35;
 
     int leftBase  = turnRight ? outerPwm : innerPwm;
     int rightBase = turnRight ? innerPwm : outerPwm;
@@ -114,10 +115,10 @@ inline void executeSmoothTurn90(bool turnRight) {
             if (turnedAngle >= thresholdDeg) break;
         }
 
-        float targetRate = turnRight ? -180.0f : +180.0f;
+        float targetRate = turnRight ? -140.0f : +140.0f;
         float currentRate = readGyroZRate();
         float rateError = targetRate - currentRate;
-        float rateCorrection = rateError * 0.35f;
+        float rateCorrection = rateError * 0.25f;
 
         if (turnRight) {
             setMotorRaw(leftBase + rateCorrection, rightBase - rateCorrection);
@@ -136,7 +137,7 @@ inline void executeSmoothTurn90(bool turnRight) {
 
 inline void executeUTurn180() {
     float startHeading = currentYawDeg;
-    setMotorRaw(140, -140);
+    setMotorRaw(70, -70); // 50% speed U-turn
     while (true) {
         updateYaw();
         if (currentYawDeg - startHeading <= -176.0f) break;
