@@ -15,6 +15,13 @@
 #define PIN_BIN1 25
 #define PIN_BIN2 33
 
+// Direction Inversion (Because motors face opposite sides of the chassis)
+#define INVERT_LEFT_MOTOR  0
+#define INVERT_RIGHT_MOTOR 1
+
+#define INVERT_LEFT_ENCODER  0
+#define INVERT_RIGHT_ENCODER 1
+
 // Quadrature Encoders (GPI Pins with external 4.7k pull-up resistors to 3.3V)
 #define PIN_ENC_L_A 36 // VP
 #define PIN_ENC_L_B 39 // VN
@@ -42,7 +49,7 @@ const uint8_t TOF_I2C_ADDRS[NUM_TOF] = {0x30, 0x31, 0x32, 0x33, 0x34};
 #define PIN_BTN2 13  // Button 2: Start High-Speed Smooth Turn Run
 
 // ============================================================================
-// 2. CONSTANTS & TUNING PARAMETERS
+// 2. CONSTANTS & TUNING PARAMETERS (50% REDUCED SPEED)
 // ============================================================================
 #define PWM_FREQ 20000
 #define PWM_RES  8
@@ -58,17 +65,17 @@ const uint8_t TOF_I2C_ADDRS[NUM_TOF] = {0x30, 0x31, 0x32, 0x33, 0x34};
 #define WALL_FRONT_THRESHOLD_MM 150
 #define NOMINAL_SIDE_DIST_MM    84
 
-// Speeds (0-255 PWM)
-#define SPEED_SEARCH_CRUISE 150
-#define SPEED_FAST_CRUISE   220
-#define SPEED_SMOOTH_TURN   160
+// Speeds (REDUCED TO 50% FOR SAFE BENCH & CONTROLLED TESTING)
+#define SPEED_SEARCH_CRUISE 75    // 50% of 150
+#define SPEED_FAST_CRUISE   110   // 50% of 220
+#define SPEED_SMOOTH_TURN   80    // 50% of 160
 
-// PID Gains
-#define KP_WALL 0.50f
-#define KD_WALL 0.25f
+// PID Gains tuned for 50% speed
+#define KP_WALL 0.35f
+#define KD_WALL 0.15f
 
-#define KP_GYRO 3.20f
-#define KD_GYRO 0.80f
+#define KP_GYRO 2.50f
+#define KD_GYRO 0.60f
 
 // Maze Definitions
 #define MAZE_SIZE 16
