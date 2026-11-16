@@ -90,13 +90,12 @@ inline void advanceStraightOneCell(int cruiseSpeed) {
 
 /**
  * ============================================================================
- * 🔄 CONTINUOUS SMOOTH 90° ARC TURN (50% Controlled Speed)
+ * 🔄 CONTINUOUS SMOOTH 90° ARC TURN (Zero-Stop Turn)
  * ============================================================================
  */
 inline void executeSmoothTurn90(bool turnRight) {
     float startHeading = currentYawDeg;
 
-    // Proportional differential wheel speeds at 50% speed
     int outerPwm = SPEED_SMOOTH_TURN + 30;
     int innerPwm = SPEED_SMOOTH_TURN - 35;
 
@@ -137,7 +136,7 @@ inline void executeSmoothTurn90(bool turnRight) {
 
 inline void executeUTurn180() {
     float startHeading = currentYawDeg;
-    setMotorRaw(70, -70); // 50% speed U-turn
+    setMotorRaw(70, -70);
     while (true) {
         updateYaw();
         if (currentYawDeg - startHeading <= -176.0f) break;
@@ -182,15 +181,50 @@ inline void navigateToNextCell(Direction targetDir, bool useSmoothTurns, int cru
     }
 }
 
-inline Direction getBestNextDirection() {
+/**
+ * ============================================================================
+ * 👈 1. LEFT-HAND RULE DECISION ENGINE (Always Hug Left Wall)
+ * Priority: Left -> Straight -> Right -> Back (Dead end)
+ * ============================================================================
+ */
+inline Direction getLeftHandRuleDirection() {
+    Direction leftDir  = (Direction)((robotDir + 3) % 4);
+    Direction frontDir = robotDir;
+    Direction rightDir = (Direction)((robotDir + 1) % 4);
+    Direction backDir  = (Direction)((robotDir + 2) % 4);
+
+    // 1. Can we turn Left?
+    if (!(mazeWalls[robotX][robotY] & WALL_MASKS[leftDir])) {
+        return leftDir;
+    }
+    // 2. Can we go Straight?
+    if (!(mazeWalls[robotX][robotY] & WALL_MASKS[frontDir])) {
+        return frontDir;
+    }
+    // 3. Can we turn Right?
+    if (!(mazeWalls[robotX][robotY] & WALL_MASKS[rightDir])) {
+        return rightDir;
+    }
+    // 4. Dead end -> U-turn
+    return backDir;
+}
+
+/**
+ * ============================================================================
+ * 🌊 2. FLOODFILL ALGORITHM DECISION ENGINE WITH LEFT-HAND TIE-BREAKING
+ * Minimizes distance potential to goal; uses Left-Hand priority when tied!
+ * ============================================================================
+ */
+inline Direction getFloodfillDirection() {
     uint8_t minD = 255;
     Direction bestDir = robotDir;
 
+    // Ordered with Left-Hand Priority: Left -> Straight -> Right -> Back
     Direction checkOrder[4] = {
-        robotDir,
-        (Direction)((robotDir + 3) % 4),
-        (Direction)((robotDir + 1) % 4),
-        (Direction)((robotDir + 2) % 4)
+        (Direction)((robotDir + 3) % 4), // 1. Left
+        robotDir,                         // 2. Straight
+        (Direction)((robotDir + 1) % 4), // 3. Right
+        (Direction)((robotDir + 2) % 4)  // 4. Back
     };
 
     for (int i = 0; i < 4; i++) {
