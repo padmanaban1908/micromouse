@@ -28,9 +28,11 @@
 #define L_ENC_DIR  1
 #define R_ENC_DIR -1
 
-// Encoders CPR (Counts Per Revolution - 4x Quadrature): ~2772 counts/rev
-#define CPR_LEFT   2772.1f
-#define CPR_RIGHT  2772.3f
+// Encoders CPR & Wheel Geometry (4x Quadrature Decoding)
+#define CPR_LEFT       2788.0f
+#define CPR_RIGHT      2788.0f
+#define WHEEL_DIAM_MM  33.5f
+#define MM_PER_COUNT   (3.14159265f * WHEEL_DIAM_MM / CPR_LEFT) // ~0.03775 mm/count
 
 // I2C Bus
 #define PIN_I2C_SDA 21
