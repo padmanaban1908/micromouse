@@ -54,8 +54,10 @@
 #define L_ENC_DIR  1
 #define R_ENC_DIR -1
 
-const float CPR_LEFT  = 2772.1f;
-const float CPR_RIGHT = 2772.3f;
+const float CPR_LEFT      = 2788.0f;
+const float CPR_RIGHT     = 2788.0f;
+const float WHEEL_DIAM_MM = 33.5f;
+const float MM_PER_COUNT  = 3.14159265f * WHEEL_DIAM_MM / CPR_LEFT; // ~0.03775 mm per count
 
 // Pushbuttons
 #define PIN_BTN1 13   // Button 1: Start / Pause Maze Solver
