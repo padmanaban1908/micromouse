@@ -1,8 +1,8 @@
-# 🐭 Autonomous Micromouse Robot (PlatformIO)
+# 🐭 Autonomous Micromouse Robot
 
-An intelligent, high-speed autonomous **Micromouse Robot** designed to map, explore, and solve official $16 \times 16$ competition mazes using the **Queue-based Floodfill Algorithm**, wall-centering PID control, and **Continuous Smooth 90° Arc Turns**.
+An intelligent, high-speed autonomous **Micromouse Robot** designed to map, explore, and solve official $16 \times 16$ competition mazes using the **Left-Hand Rule (LSRB)**, **Queue-based Floodfill Algorithm**, active ToF wall-centering PID control, and closed-loop gyro turning.
 
-Built and configured for **PlatformIO** on the **ESP32**.
+Supports both **PlatformIO** (VS Code) and the **Arduino IDE** (ESP32 Core 2.x and 3.x).
 
 ---
 
@@ -12,18 +12,22 @@ Built and configured for **PlatformIO** on the **ESP32**.
 micromouse/
 ├── platformio.ini                     # PlatformIO configuration & automated library management
 ├── src/
-│   └── main.cpp                       # Main setup, loop & state machine
+│   └── main.cpp                       # Main setup, loop & LSRB state machine
 ├── include/                           # Modular embedded C++ headers
 │   ├── config.h                       # Pin assignments, speeds, odometry & PID gains
-│   ├── motors.h                       # TB6612 motor driver (20 kHz ultrasonic PWM)
-│   ├── encoders.h                     # Quadrature encoder ISRs & odometry tracking
+│   ├── motors.h                       # TB6612 motor driver (Core 2.x & 3.x dual compatibility)
+│   ├── encoders.h                     # 4x Quadrature encoder ISRs & fast register reads
 │   ├── imu.h                          # Direct I2C MPU-6050 gyro yaw rate integration
 │   ├── tof.h                          # 5x VL53L0X dynamic XSHUT addressing & reading
 │   ├── floodfill.h                    # 16x16 maze matrix & queue-based BFS Floodfill solver
 │   └── motion.h                       # Smooth 90° arc turns & ToF wall-centering PID
 ├── code/
-│   ├── firmware/
-│   │   └── micromouse_robot.ino       # Standalone Arduino IDE single-file firmware
+│   ├── firmware/                      # Standalone Arduino IDE sketches (.ino)
+│   │   ├── 01_forward_sensors.ino     # Stage 1: Forward driving with sensor wall-centering
+│   │   ├── 02_turn_90_right.ino       # Stage 2: Precision 90° right turn with gyro feedback
+│   │   ├── 03_encoder_calibration.ino # Stage 3: 4x Quadrature encoder CPR calibration tool
+│   │   ├── 04_move_1_metre.ino        # Stage 4: 1-metre precision distance test (PID + L/R sync)
+│   │   └── micromouse_robot.ino       # Full autonomous Left-Hand Rule & Floodfill solver
 │   └── simulation/
 │       └── micromouse_simulator.py    # Python 16x16 maze simulator & visualizer
 ├── ideas/                             # Mathematical modeling, ideas, and hardware guides
@@ -39,64 +43,55 @@ micromouse/
 
 ---
 
-## ⚡ Hardware Pinout Specification
+## ⚡ Verified Hardware Specifications
 
 | Peripheral | Assigned Pins | Description |
 |---|---|---|
-| **Left Motor (TB6612)** | `PWMA = 27`, `AIN1 = 14`, `AIN2 = 26` | 20 kHz PWM (zero motor hum) |
-| **Right Motor (TB6612)**| `PWMB = 32`, `BIN1 = 25`, `BIN2 = 33` | 20 kHz PWM |
-| **Left Encoder** | `A = 36 (VP)`, `B = 39 (VN)` | External $4.7\text{ k}\Omega$ pull-up to 3.3V, hardware interrupts |
-| **Right Encoder** | `A = 34`, `B = 35` | External $4.7\text{ k}\Omega$ pull-up to 3.3V, hardware interrupts |
+| **Left Motor (TB6612)** | `PWMA = 27`, `AIN1 = 14`, `AIN2 = 26` | Forward: `AIN1 = LOW, AIN2 = HIGH` |
+| **Right Motor (TB6612)**| `PWMB = 32`, `BIN1 = 25`, `BIN2 = 33` | Forward: `BIN1 = HIGH, BIN2 = LOW` |
+| **Left Encoder** | `A = 34`, `B = 35` | 4.7 kΩ pull-ups to 3.3V, `L_ENC_DIR = 1` |
+| **Right Encoder** | `A = 36`, `B = 39` | 4.7 kΩ pull-ups to 3.3V, `R_ENC_DIR = -1` |
+| **Encoder Resolution (CPR)** | **2788.0 counts/rev** | Full 4x quadrature decoding |
+| **Wheel Diameter** | **33.5 mm** | Odometry: $\approx 0.03775\text{ mm/count}$ |
 | **I2C Bus** | `SDA = 21`, `SCL = 22` | 400 kHz Fast-Mode I2C |
 | **5x ToF (VL53L0X)** | `XSHUT: 23, 19, 18, 17, 16` | Dynamic addresses `0x30, 0x31, 0x32, 0x33, 0x34` |
 | **IMU (MPU-6050)** | Direct I2C @ `0x68` | Fast Z-gyro rate integration |
-| **Pushbuttons** | `BTN1 = 4`, `BTN2 = 13` | `BTN1`: Run 1 (Search), `BTN2`: Run 2 (Smooth 90° Speed Run) |
+| **Pushbuttons** | `BTN1 = 13`, `BTN2 = 4` | `BTN1`: Forward / Start / Verify; `BTN2`: Backward / Zero / Reset |
 
 ---
 
-## 🔄 Continuous Smooth 90° Arc Turns (Zero-Stop Turning)
+## 🚀 Calibration & Test Sketches
 
-Traditional robots lose up to **800 ms per corner** by stopping in the cell center, pivoting 90° in place, stopping again, and accelerating from rest.
+1. **`03_encoder_calibration.ino`**:
+   - Counts per revolution (CPR) measurement tool.
+   - Turn wheels 10 or 20 full revolutions by hand, type the number in the Serial Monitor (115200 baud), and get averaged CPR.
+   - Press `BTN1` or type `v` to verify exactly 1 full spin under motor power.
 
-This firmware executes continuous circular arc turns:
-- **Zero-Stop Curvature**: The robot maintains linear forward velocity ($v_{\text{turn}} \approx 160\text{ mm/s}$).
-- **Differential Wheel Drive**:
-  $$v_{\text{outer}} = v_{\text{turn}} + 55, \quad v_{\text{inner}} = v_{\text{turn}} - 65$$
-- **Closed-Loop Gyro PID**: Samples the MPU-6050 Z-axis at $500\text{ Hz}$, dynamically regulating angular velocity until exactly $87.5^\circ$ is completed.
-- **Immediate Re-Engagement**: Straightens out smoothly and instantly locks onto the next corridor with active ToF wall-centering.
+2. **`04_move_1_metre.ino`**:
+   - Drives exactly 1000 mm using encoder feedback and closed-loop speed control.
+   - Smooth acceleration, cruise ($200\text{ mm/s}$), and deceleration to target.
+   - Active Left/Right wheel synchronization ($K_{\text{straight}} = 2.0$) keeps the bot driving perfectly straight.
+   - Press `BTN1` to drive Forward 1 m; press `BTN2` to drive Backward 1 m.
+   - Any button press during run acts as an **Emergency Stop**.
 
----
-
-## 🛠️ How to Build and Upload with PlatformIO
-
-### In VS Code with PlatformIO IDE:
-1. Open the folder `d:\micromouse` in **VS Code**.
-2. PlatformIO will automatically recognize `platformio.ini` and download required libraries (`Adafruit_VL53L0X`, `Wire`).
-3. Connect your bot via USB.
-4. Click the **PlatformIO Upload** icon (checkmark = build, right-arrow = upload) in the bottom blue status bar:
-   - Or press: `Ctrl + Alt + U` (Windows)
-5. Open Serial Monitor (`Ctrl + Alt + S` or click the plug icon) at baud rate **115200**.
-
-### Via PlatformIO CLI:
-```bash
-# Build firmware
-pio run
-
-# Upload to ESP32
-pio run --target upload
-
-# Open Serial Monitor
-pio device monitor -b 115200
-```
+3. **`micromouse_robot.ino`**:
+   - Full autonomous Left-Hand Rule (LSRB) maze solver.
+   - Active wall-centering using 5x ToF sensors.
+   - Closed-loop 90° pivot turns and 180° dead-end U-turns using MPU-6050 gyro.
+   - Press `BTN1` (GPIO 13) to Start/Pause navigation; press `BTN2` (GPIO 4) to zero heading.
 
 ---
 
-## 🎮 How to Operate the Robot
+## 🛠️ Uploading Code
 
-1. **Power On**: Place the robot in the starting cell $(0, 0)$ facing North. The MPU-6050 gyro will calibrate its stationary bias for 1 second.
-2. **Press Button 1 (`Pin 4`)**:
-   - Executes **Run 1 (Exploration)**.
-   - Discovers unknown walls using the 5 ToF sensors, calculates distances with Floodfill, enters the center goal cells $\{(7,7)..(8,8)\}$, and automatically navigates back to $(0,0)$.
-3. **Press Button 2 (`Pin 13`)**:
-   - Executes **Run 2 (High-Speed Run)**.
-   - Navigates the mapped optimal shortest path at top cruise speed using **Smooth 90° Arc Turns**!
+### Option 1: Arduino IDE (ESP32 Core 2.x & 3.x)
+1. Open any sketch from `code/firmware/` in **Arduino IDE**.
+2. Select Board: **ESP32 Dev Module**.
+3. Select Port: (e.g. `COM10`).
+4. Click **Upload**.
+   - If the ESP32 doesn't auto-reset: hold `BOOT` (IO0), tap `EN` (RST), then release `BOOT`.
+
+### Option 2: PlatformIO (VS Code)
+1. Open the project folder `d:\micromouse` in **VS Code**.
+2. Click the PlatformIO **Upload** button in the bottom status bar (`Ctrl + Alt + U`).
+3. Open Serial Monitor (`Ctrl + Alt + S`) at **115200 baud**.
