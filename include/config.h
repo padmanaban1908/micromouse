@@ -2,31 +2,35 @@
 #include <Arduino.h>
 
 // ============================================================================
-// 1. PIN CONFIGURATION
+// 1. PIN CONFIGURATION (VERIFIED ON ROBOT)
 // ============================================================================
 
-// Left Motor (TB6612FNG)
+// Motor Driver (TB6612FNG)
 #define PIN_PWMA 27
 #define PIN_AIN1 14
 #define PIN_AIN2 26
 
-// Right Motor (TB6612FNG)
 #define PIN_PWMB 32
 #define PIN_BIN1 25
 #define PIN_BIN2 33
 
-// Direction Inversion: Inverted so both wheels drive FORWARD
-#define INVERT_LEFT_MOTOR  1
-#define INVERT_RIGHT_MOTOR 0
+// Motor Forward Directions (Verified on Robot):
+// Left:  AIN1=LOW,  AIN2=HIGH
+// Right: BIN1=HIGH, BIN2=LOW
 
-#define INVERT_LEFT_ENCODER  1
-#define INVERT_RIGHT_ENCODER 0
+// Quadrature Encoders (GPIO 34-39 input-only, with external 4.7k pull-ups to 3.3V)
+// Verified on robot: left encoder on 34/35, right on 36/39
+#define PIN_ENC_L_A 34
+#define PIN_ENC_L_B 35
+#define PIN_ENC_R_A 36
+#define PIN_ENC_R_B 39
 
-// Quadrature Encoders (GPI Pins with external 4.7k pull-up resistors to 3.3V)
-#define PIN_ENC_L_A 36 // VP
-#define PIN_ENC_L_B 39 // VN
-#define PIN_ENC_R_A 34
-#define PIN_ENC_R_B 35
+#define L_ENC_DIR  1
+#define R_ENC_DIR -1
+
+// Encoders CPR (Counts Per Revolution - 4x Quadrature): ~2772 counts/rev
+#define CPR_LEFT   2772.1f
+#define CPR_RIGHT  2772.3f
 
 // I2C Bus
 #define PIN_I2C_SDA 21
@@ -34,61 +38,35 @@
 
 // 5x Time-of-Flight (VL53L0X) XSHUT Pins
 #define NUM_TOF 5
-const int TOF_XSHUT_PINS[NUM_TOF] = {23, 19, 18, 17, 16};
+const int TOF_XSHUT_PINS[NUM_TOF]   = {23, 19, 18, 17, 16};
 const uint8_t TOF_I2C_ADDRS[NUM_TOF] = {0x30, 0x31, 0x32, 0x33, 0x34};
 
-// ToF Indices
 #define SENS_LEFT   0  // Left 90° (Pin 23)
 #define SENS_FL     1  // Front-Left 45° (Pin 19)
 #define SENS_FRONT  2  // Front Center 0° (Pin 18)
 #define SENS_FR     3  // Front-Right 45° (Pin 17)
 #define SENS_RIGHT  4  // Right 90° (Pin 16)
 
-// Pushbuttons (Active LOW)
-#define PIN_BTN1 4   // Button 1: Start Search Run
-#define PIN_BTN2 13  // Button 2: Start High-Speed Smooth Turn Run
+// Pushbuttons
+#define PIN_BTN1 13  // Button 1: Start / Pause (or Verify)
+#define PIN_BTN2 4   // Button 2: Zero Counters / Reset
 
-// ============================================================================
-// 2. CONSTANTS & TUNING PARAMETERS (50% REDUCED SPEED)
-// ============================================================================
-#define PWM_FREQ 20000
+// PWM Parameters
+#define PWM_FREQ 5000
 #define PWM_RES  8
 #define CH_MOT_L 0
 #define CH_MOT_R 1
 
-// Odometry Calibration
-#define TICKS_PER_MM 3.58f
-#define CELL_TICKS   (180.0f * TICKS_PER_MM) // ~644 ticks per cell
-
-// ToF Wall Detection Thresholds (mm)
-#define WALL_SIDE_THRESHOLD_MM  130
-#define WALL_FRONT_THRESHOLD_MM 150
-#define NOMINAL_SIDE_DIST_MM    84
-
-// Speeds (50% controlled testing speed)
+// Speeds (0-255 PWM)
 #define SPEED_SEARCH_CRUISE 75
 #define SPEED_FAST_CRUISE   110
 #define SPEED_SMOOTH_TURN   80
 
-// PID Gains tuned for 50% speed
-#define KP_WALL 0.35f
-#define KD_WALL 0.15f
+// Sensor Thresholds
+#define SIDE_OPEN_THRESHOLD_MM  150
+#define FRONT_WALL_THRESHOLD_MM 110
+#define NOMINAL_SIDE_DIST_MM    84
 
+#define KP_WALL 0.35f
 #define KP_GYRO 2.50f
 #define KD_GYRO 0.60f
-
-// Maze Definitions
-#define MAZE_SIZE 16
-
-#define WALL_NORTH 0x01
-#define WALL_EAST  0x02
-#define WALL_SOUTH 0x04
-#define WALL_WEST  0x08
-#define VISITED    0x10
-
-enum Direction {
-    DIR_NORTH = 0,
-    DIR_EAST  = 1,
-    DIR_SOUTH = 2,
-    DIR_WEST  = 3
-};
